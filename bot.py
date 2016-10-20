@@ -11,7 +11,7 @@ PORT = int(environ.get('PORT', '5000'))
 updater = Updater(TOKEN)
 
 def echo(bot, update):
-    return update.message.text
+    bot.sendMessage(update.message.chat_id, text=update.message.text)
 
 if __name__ == '__main__':
     updater.dispatcher.add_handler(MessageHandler([Filters.text], echo))
