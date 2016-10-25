@@ -1,3 +1,11 @@
+"""
+Bot para gerenciar as pautas das reuniões do CALICO
+
+ls - lista as pautas
+pauta - adiciona nova pauta (apenas no grupo do CALICO)
+rm - remove todas as pautas (apenas no grupo do CALICO)
+"""
+
 import logging
 
 from os import environ
@@ -55,7 +63,6 @@ def add_pauta(bot, update):
             reply_to_message_id=update.message.message_id)
 
 
-@only_in_chat
 def ls_pautas(bot, update):
     if not db.pautas.count():
         bot.sendMessage(update.message.chat_id,
@@ -66,8 +73,9 @@ def ls_pautas(bot, update):
 
     msg = '*Pauta:*\n'
 
-    for pauta in cursor:
-        msg += '\u2022 {} ({})\n\n'.format(pauta['text'], pauta['sender'])
+    for index, pauta in enumerate(cursor):
+        msg += '\u2022 {}: {} ({})\n\n'.format(
+            index, pauta['text'], pauta['sender'])
 
     cursor.close()
 
@@ -80,11 +88,42 @@ def ls_pautas(bot, update):
 
 @only_in_chat
 def rm_pautas(bot, update):
-    result = db.pautas.delete_many({})
+    try:
+        text = update.message.text.split()[1]
+    except IndexError:
+        bot.sendMessage(update.message.chat_id,
+            text='Esperava por "^/rm (all|\d+)$"')
+        return
 
-    bot.sendMessage(update.message.chat_id,
-        text='{} pautas removida(s)'.format(result.deleted_count))
+    if text == 'all':
+        result = db.pautas.delete_many({})
 
+        bot.sendMessage(update.message.chat_id,
+            text='{} pautas removida(s)'.format(result.deleted_count))
+
+    else:
+
+        try:
+            index = int(text)
+        except ValueError:
+            bot.sendMessage(update.message.chat_id,
+                text='Esperava por "^/rm (all|\d+)$"')
+            return
+
+        cursor = db.pautas.find()
+
+        try:
+            db.pautas.delete_one(cursor[index])
+
+            bot.sendMessage(update.message.chat_id,
+                text='Pauta removida')
+
+        except IndexError:
+            bot.sendMessage(update.message.chat_id,
+                text='Pauta inexistente')
+
+        finally:
+            cursor.close()
 
 if __name__ == '__main__':
     updater = Updater(TOKEN)
