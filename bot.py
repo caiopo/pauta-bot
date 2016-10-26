@@ -35,7 +35,7 @@ def add_pauta(bot, update):
     user = update.message.from_user
 
     try:
-        re.search(r'^/pauta (.*)$', update.message.text).group(1)
+        text = re.search(r'^/pauta (.*)$', update.message.text).group(1)
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
             text='Esperava por "/pauta <texto>"')
@@ -65,6 +65,11 @@ def ls_pautas(bot, update):
             'chat_id': update.message.chat_id,
         }
     )
+
+    if not cursor.count():
+        bot.sendMessage(update.message.chat_id,
+            text='Nenhuma pauta registrada')
+        return
 
     msg = '*Pauta:*\n'
 

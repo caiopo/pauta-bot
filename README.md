@@ -1,4 +1,4 @@
-# pauta-bot
+# [pauta-bot](https://telegram.me/pauta_bot)
 
 Bot para gerenciar as pautas das reuniões do CALICO
 
@@ -8,4 +8,3 @@ Bot para gerenciar as pautas das reuniões do CALICO
 
 Feito por @caiopo
 
-Repositório: https://github.com/caiopo/pauta-bot
