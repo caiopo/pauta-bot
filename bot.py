@@ -1,12 +1,6 @@
-"""
-Bot para gerenciar as pautas das reuniões do CALICO
-
-ls - lista as pautas
-pauta - adiciona nova pauta (apenas no grupo do CALICO)
-rm - remove todas as pautas (apenas no grupo do CALICO)
-"""
 
 import logging
+import re
 
 from os import environ
 from pymongo import MongoClient
@@ -19,29 +13,30 @@ TOKEN = environ['TOKEN']
 APPNAME = environ['APPNAME']
 PORT = int(environ.get('PORT', '5000'))
 MONGODB_URI = environ['MONGODB_URI']
-CHAT_ID = environ['CHAT_ID']
 
 client = MongoClient(MONGODB_URI)
 
 db = client.get_default_database()
 
-def only_in_chat(func):
-    def decorated(bot, update):
-        if str(update.message.chat_id) == CHAT_ID:
-            func(bot, update)
-        else:
-            bot.sendMessage(update.message.chat_id,
-                text='Comando não disponível')
+HELP_STR = (
+"""
+Bot para gerenciar as pautas das reuniões do CALICO
 
-    return decorated
+/pauta - adiciona nova pauta
+/ls - lista as pautas
+/rm - remove todas as pautas
 
+Feito por @caiopo
+Repositório: https://github.com/caiopo/pauta-bot
+"""
+)
 
-@only_in_chat
 def add_pauta(bot, update):
     user = update.message.from_user
-    text = ' '.join(update.message.text.split()[1:])
 
-    if not text:
+    try:
+        re.search(r'^/pauta (.*)$', update.message.text).group(1)
+    except AttributeError:
         bot.sendMessage(update.message.chat_id,
             text='Esperava por "/pauta <texto>"')
         return
@@ -50,6 +45,7 @@ def add_pauta(bot, update):
         {
             'sender': user.name,
             'text': text,
+            'chat_id': update.message.chat_id,
         }
     )
 
@@ -64,12 +60,11 @@ def add_pauta(bot, update):
 
 
 def ls_pautas(bot, update):
-    if not db.pautas.count():
-        bot.sendMessage(update.message.chat_id,
-            text='Nenhuma pauta registrada')
-        return
-
-    cursor = db.pautas.find()
+    cursor = db.pautas.find(
+        {
+            'chat_id': update.message.chat_id,
+        }
+    )
 
     msg = '*Pauta:*\n'
 
@@ -86,31 +81,32 @@ def ls_pautas(bot, update):
         parse_mode=ParseMode.MARKDOWN)
 
 
-@only_in_chat
 def rm_pautas(bot, update):
     try:
-        text = update.message.text.split()[1]
-    except IndexError:
+        text = re.search(r'^/rm (all|\d+)$', update.message.text).group(1)
+    except AttributeError:
         bot.sendMessage(update.message.chat_id,
             text='Esperava por "^/rm (all|\d+)$"')
         return
 
     if text == 'all':
-        result = db.pautas.delete_many({})
+        result = db.pautas.delete_many(
+            {
+                'chat_id': update.message.chat_id,
+            }
+        )
 
         bot.sendMessage(update.message.chat_id,
             text='{} pautas removida(s)'.format(result.deleted_count))
 
     else:
+        index = int(text)
 
-        try:
-            index = int(text)
-        except ValueError:
-            bot.sendMessage(update.message.chat_id,
-                text='Esperava por "^/rm (all|\d+)$"')
-            return
-
-        cursor = db.pautas.find()
+        cursor = db.pautas.find(
+            {
+                'chat_id': update.message.chat_id,
+            }
+        )
 
         try:
             db.pautas.delete_one(cursor[index])
@@ -125,6 +121,11 @@ def rm_pautas(bot, update):
         finally:
             cursor.close()
 
+def bot_help(bot, update):
+    bot.sendMessage(update.message.chat_id,
+        text=HELP_STR,
+        disable_web_page_preview=True)
+
 if __name__ == '__main__':
     updater = Updater(TOKEN)
 
@@ -133,6 +134,8 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('pauta', add_pauta))
     dispatcher.add_handler(CommandHandler('ls', ls_pautas))
     dispatcher.add_handler(CommandHandler('rm', rm_pautas))
+    dispatcher.add_handler(CommandHandler('start', bot_help))
+    dispatcher.add_handler(CommandHandler('help', bot_help))
 
     updater.start_webhook(listen="0.0.0.0", port=PORT, url_path=TOKEN)
     updater.bot.setWebhook("https://" + APPNAME + ".herokuapp.com/" + TOKEN)
