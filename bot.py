@@ -36,7 +36,7 @@ def add_pauta(bot, update):
     user = update.message.from_user
 
     try:
-        text = re.search(r'^/pauta (.*)$', update.message.text).group(1)
+        text = re.search(r'^/pauta(@pauta_bot)? (.*)$', update.message.text).group(2)
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
             text='Esperava por "/pauta <texto>"')
@@ -99,7 +99,7 @@ def ls_pautas(bot, update):
 
 def rm_pautas(bot, update):
     try:
-        text = re.search(r'^/rm (all|\d+)$', update.message.text).group(1)
+        text = re.search(r'^/rm(@pauta_bot)? (all|\d+)$', update.message.text).group(2)
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
             text='Esperava por "^/rm (all|\d+)$"')
@@ -141,7 +141,7 @@ def rm_pautas(bot, update):
 
 def data(bot, update):
     try:
-        text = re.search(r'^/data (.*)$', update.message.text).group(1)
+        text = re.search(r'^/data(@pauta_bot)? (.*)$', update.message.text).group(2)
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
             text='Esperava por "/data <texto>"')
@@ -179,7 +179,7 @@ def data(bot, update):
 
 def local(bot, update):
     try:
-        text = re.search(r'^/local (.*)$', update.message.text).group(1)
+        text = re.search(r'^/local(@pauta_bot)? (.*)$', update.message.text).group(2)
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
             text='Esperava por "/local <texto>"')
