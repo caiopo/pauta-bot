@@ -1,4 +1,3 @@
-
 import logging
 import re
 
@@ -25,6 +24,8 @@ Bot para gerenciar as pautas das reuniões do CALICO
 /pauta - adiciona nova pauta
 /ls - lista as pautas
 /rm - remove todas as pautas
+/data - adiciona uma data para a próxima reunião
+/local - adiciona um local para a próxima reunião
 
 Feito por @caiopo
 Repositório: https://github.com/caiopo/pauta-bot
@@ -71,7 +72,17 @@ def ls_pautas(bot, update):
             text='Nenhuma pauta registrada')
         return
 
-    msg = '*Pauta:*\n'
+    metadata = db.meta.find_one(
+        {
+            'chat_id': update.message.chat_id,
+        }
+    )
+
+    if metadata:
+        msg = '*Reunião*\nData e Hora: {}\nLocal: {}\n\n*Pauta:*\n'.format(
+            metadata['data'], metadata['local'])
+    else:
+        msg = '*Pauta:*\n'
 
     for index, pauta in enumerate(cursor):
         msg += '\u2022 {}: {} ({})\n\n'.format(
@@ -117,14 +128,92 @@ def rm_pautas(bot, update):
             db.pautas.delete_one(cursor[index])
 
             bot.sendMessage(update.message.chat_id,
-                text='Pauta removida')
+                text='Pauta removida',
+                reply_to_message_id=update.message.message_id)
 
         except IndexError:
             bot.sendMessage(update.message.chat_id,
-                text='Pauta inexistente')
+                text='Pauta inexistente',
+                reply_to_message_id=update.message.message_id)
 
         finally:
             cursor.close()
+
+def data(bot, update):
+    try:
+        text = re.search(r'^/data (.*)$', update.message.text).group(1)
+    except AttributeError:
+        bot.sendMessage(update.message.chat_id,
+            text='Esperava por "/data <texto>"')
+        return
+
+    metadata = db.meta.find_one(
+        {
+            'chat_id': update.message.chat_id,
+        }
+    )
+
+    if not metadata:
+        db.meta.insert_one(
+            {
+                'chat_id': update.message.chat_id,
+                'data': text,
+                'local': 'Não informado',
+            }
+        )
+
+    else:
+        metadata['data'] = text
+
+        db.meta.replace_one(
+            {
+                'chat_id': update.message.chat_id,
+            },
+            metadata)
+
+
+    bot.sendMessage(update.message.chat_id,
+        text='Data adicionada',
+        reply_to_message_id=update.message.message_id)
+
+
+def local(bot, update):
+    try:
+        text = re.search(r'^/local (.*)$', update.message.text).group(1)
+    except AttributeError:
+        bot.sendMessage(update.message.chat_id,
+            text='Esperava por "/local <texto>"')
+        return
+
+    metadata = db.meta.find_one(
+        {
+            'chat_id': update.message.chat_id,
+        }
+    )
+
+    if not metadata:
+        db.meta.insert_one(
+            {
+                'chat_id': update.message.chat_id,
+                'local': text,
+                'data': 'Não informada',
+            }
+        )
+
+    else:
+        metadata['local'] = text
+
+        db.meta.replace_one(
+            {
+                'chat_id': update.message.chat_id,
+            },
+            metadata)
+
+
+    bot.sendMessage(update.message.chat_id,
+        text='Local adicionado',
+        reply_to_message_id=update.message.message_id)
+
 
 def bot_help(bot, update):
     bot.sendMessage(update.message.chat_id,
@@ -139,6 +228,10 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('pauta', add_pauta))
     dispatcher.add_handler(CommandHandler('ls', ls_pautas))
     dispatcher.add_handler(CommandHandler('rm', rm_pautas))
+
+    dispatcher.add_handler(CommandHandler('data', data))
+    dispatcher.add_handler(CommandHandler('local', local))
+
     dispatcher.add_handler(CommandHandler('start', bot_help))
     dispatcher.add_handler(CommandHandler('help', bot_help))
 

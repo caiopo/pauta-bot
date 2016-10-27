@@ -7,3 +7,7 @@ Bot para gerenciar as pautas das reuniões do CALICO
 /ls - lista as pautas
 
 /rm - remove todas as pautas
+
+/data - adiciona uma data para a próxima reunião
+
+/local - adiciona um local para a próxima reunião
