@@ -6,7 +6,7 @@ from pymongo import MongoClient
 from telegram.ext import Updater, CommandHandler
 from telegram import ParseMode
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 TOKEN = environ['TOKEN']
 APPNAME = environ['APPNAME']
