@@ -12,6 +12,7 @@ TOKEN = environ['TOKEN']
 APPNAME = environ['APPNAME']
 PORT = int(environ.get('PORT', '5000'))
 MONGODB_URI = environ['MONGODB_URI']
+MAINTAINER_ID = environ['MAINTAINER_ID']
 
 client = MongoClient(MONGODB_URI)
 
@@ -32,6 +33,18 @@ Repositório: https://github.com/caiopo/pauta-bot
 """
 )
 
+def report_errors(func):
+    def decorated(bot, update):
+        try:
+            func(bot, update)
+        except Exception as e:
+            bot.sendMessage(MAINTAINER_ID,
+                text='Error on @quibebot\nUpdate: {}\nError type: {}\nError: {}'
+                    .format(update, type(e), e))
+    return decorated
+
+
+@report_errors
 def add_pauta(bot, update):
     user = update.message.from_user
 
@@ -60,6 +73,7 @@ def add_pauta(bot, update):
             reply_to_message_id=update.message.message_id)
 
 
+@report_errors
 def ls_pautas(bot, update):
     cursor = db.pautas.find(
         {
@@ -97,6 +111,7 @@ def ls_pautas(bot, update):
         parse_mode=ParseMode.MARKDOWN)
 
 
+@report_errors
 def rm_pautas(bot, update):
     try:
         text = re.search(r'^/rm(@pauta_bot)? (all|\d+)$', update.message.text).group(2)
@@ -139,6 +154,8 @@ def rm_pautas(bot, update):
         finally:
             cursor.close()
 
+
+@report_errors
 def data(bot, update):
     try:
         text = re.search(r'^/data(@pauta_bot)? (.*)$', update.message.text).group(2)
@@ -177,6 +194,7 @@ def data(bot, update):
         reply_to_message_id=update.message.message_id)
 
 
+@report_errors
 def local(bot, update):
     try:
         text = re.search(r'^/local(@pauta_bot)? (.*)$', update.message.text).group(2)
@@ -215,6 +233,7 @@ def local(bot, update):
         reply_to_message_id=update.message.message_id)
 
 
+@report_errors
 def bot_help(bot, update):
     bot.sendMessage(update.message.chat_id,
         text=HELP_STR,
