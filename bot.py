@@ -94,13 +94,13 @@ def ls_pautas(bot, update):
 
     if metadata:
         msg = '*Reunião*\nData e Hora: {}\nLocal: {}\n\n*Pauta:*\n'.format(
-            metadata['data'], metadata['local'])
+            sanitize_string(metadata['data']), sanitize_string(metadata['local']))
     else:
         msg = '*Pauta:*\n'
 
     for index, pauta in enumerate(cursor):
         msg += '\u2022 {}: {} ({})\n\n'.format(
-            index, pauta['text'], pauta['sender'])
+            index, sanitize_string(pauta['text']), sanitize_string(pauta['sender']))
 
     cursor.close()
 
@@ -239,6 +239,13 @@ def bot_help(bot, update):
         text=HELP_STR,
         disable_web_page_preview=True)
 
+def sanitize_string(string):
+    for char in '*`_':
+        string = string.replace(char, '\\' + char)
+
+    return string
+
+
 if __name__ == '__main__':
     updater = Updater(TOKEN)
 
@@ -257,3 +264,4 @@ if __name__ == '__main__':
     updater.start_webhook(listen="0.0.0.0", port=PORT, url_path=TOKEN)
     updater.bot.setWebhook("https://" + APPNAME + ".herokuapp.com/" + TOKEN)
     updater.idle()
+
