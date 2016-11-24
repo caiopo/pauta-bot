@@ -63,9 +63,19 @@ def add_pauta(bot, update):
         }
     )
 
+    cursor = db.pautas.find(
+        {
+            'chat_id': update.message.chat_id,
+        }
+    )
+
+    count = cursor.count()
+
+    cursor.close()
+
     if result.acknowledged:
         bot.sendMessage(update.message.chat_id,
-            text='Pauta registrada',
+            text='Pauta {} registrada'.format(count-1),
             reply_to_message_id=update.message.message_id)
     else:
         bot.sendMessage(update.message.chat_id,
@@ -264,4 +274,3 @@ if __name__ == '__main__':
     updater.start_webhook(listen="0.0.0.0", port=PORT, url_path=TOKEN)
     updater.bot.setWebhook("https://" + APPNAME + ".herokuapp.com/" + TOKEN)
     updater.idle()
-
