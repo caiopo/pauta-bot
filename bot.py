@@ -6,7 +6,10 @@ from pymongo import MongoClient
 from telegram.ext import Updater, CommandHandler
 from telegram import ParseMode
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 TOKEN = environ['TOKEN']
 APPNAME = environ['APPNAME']
@@ -18,8 +21,7 @@ client = MongoClient(MONGODB_URI)
 
 db = client.get_default_database()
 
-HELP_STR = (
-"""
+HELP_STR = ("""
 Bot para gerenciar as pautas das reuniões do CALICO
 
 /pauta - adiciona nova pauta
@@ -30,17 +32,20 @@ Bot para gerenciar as pautas das reuniões do CALICO
 
 Feito por @caiopo
 Repositório: https://github.com/caiopo/pauta-bot
-"""
-)
+""").strip('\n')
+
 
 def report_errors(func):
     def decorated(bot, update):
         try:
             func(bot, update)
         except Exception as e:
-            bot.sendMessage(MAINTAINER_ID,
-                text='Error on @quibebot\nUpdate: {}\nError type: {}\nError: {}'
-                    .format(update, type(e), e))
+            bot.sendMessage(
+                MAINTAINER_ID,
+                text=('Error on @pauta-bot\n'
+                      'Update: {}\n'
+                      'ErrType: {}\n'
+                      'Error: {}').format(update, type(e), e))
     return decorated
 
 
@@ -49,10 +54,12 @@ def add_pauta(bot, update):
     user = update.message.from_user
 
     try:
-        text = re.search(r'^/pauta(@pauta_bot)? (.*)$', update.message.text).group(2)
+        text = re.search(r'^/pauta(@pauta_bot)? (.*)$',
+                         update.message.text).group(2)
+
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
-            text='Esperava por "/pauta <texto>"')
+                        text='Esperava por "/pauta <texto>"')
         return
 
     result = db.pautas.insert_one(
@@ -75,12 +82,12 @@ def add_pauta(bot, update):
 
     if result.acknowledged:
         bot.sendMessage(update.message.chat_id,
-            text='Pauta {} registrada'.format(count-1),
-            reply_to_message_id=update.message.message_id)
+                        text='Pauta {} registrada'.format(count - 1),
+                        reply_to_message_id=update.message.message_id)
     else:
         bot.sendMessage(update.message.chat_id,
-            text='Pauta não registrada, algo de errado aconteceu',
-            reply_to_message_id=update.message.message_id)
+                        text='Pauta não registrada, algo de errado aconteceu',
+                        reply_to_message_id=update.message.message_id)
 
 
 @report_errors
@@ -93,7 +100,7 @@ def ls_pautas(bot, update):
 
     if not cursor.count():
         bot.sendMessage(update.message.chat_id,
-            text='Nenhuma pauta registrada')
+                        text='Nenhuma pauta registrada')
         return
 
     metadata = db.meta.find_one(
@@ -104,30 +111,34 @@ def ls_pautas(bot, update):
 
     if metadata:
         msg = '*Reunião*\nData e Hora: {}\nLocal: {}\n\n*Pauta:*\n'.format(
-            sanitize_string(metadata['data']), sanitize_string(metadata['local']))
+            sanitize_string(metadata['data']),
+            sanitize_string(metadata['local']))
     else:
         msg = '*Pauta:*\n'
 
     for index, pauta in enumerate(cursor):
         msg += '\u2022 {}: {} ({})\n\n'.format(
-            index, sanitize_string(pauta['text']), sanitize_string(pauta['sender']))
+            index, sanitize_string(pauta['text']),
+            sanitize_string(pauta['sender']))
 
     cursor.close()
 
     msg = msg.rstrip('\n')
 
     bot.sendMessage(update.message.chat_id,
-        text=msg,
-        parse_mode=ParseMode.MARKDOWN)
+                    text=msg,
+                    parse_mode=ParseMode.MARKDOWN)
 
 
 @report_errors
 def rm_pautas(bot, update):
     try:
-        text = re.search(r'^/rm(@pauta_bot)? (all|\d+)$', update.message.text).group(2)
+        text = re.search(r'^/rm(@pauta_bot)? (all|\d+)$',
+                         update.message.text).group(2)
+
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
-            text='Esperava por "^/rm (all|\d+)$"')
+                        text='Esperava por "^/rm (all|\d+)$"')
         return
 
     if text == 'all':
@@ -138,7 +149,8 @@ def rm_pautas(bot, update):
         )
 
         bot.sendMessage(update.message.chat_id,
-            text='{} pautas removida(s)'.format(result.deleted_count))
+                        text='{} pautas removida(s)'.format(
+                            result.deleted_count))
 
     else:
         index = int(text)
@@ -153,13 +165,13 @@ def rm_pautas(bot, update):
             db.pautas.delete_one(cursor[index])
 
             bot.sendMessage(update.message.chat_id,
-                text='Pauta removida',
-                reply_to_message_id=update.message.message_id)
+                            text='Pauta removida',
+                            reply_to_message_id=update.message.message_id)
 
         except IndexError:
             bot.sendMessage(update.message.chat_id,
-                text='Pauta inexistente',
-                reply_to_message_id=update.message.message_id)
+                            text='Pauta inexistente',
+                            reply_to_message_id=update.message.message_id)
 
         finally:
             cursor.close()
@@ -168,10 +180,12 @@ def rm_pautas(bot, update):
 @report_errors
 def data(bot, update):
     try:
-        text = re.search(r'^/data(@pauta_bot)? (.*)$', update.message.text).group(2)
+        text = re.search(r'^/data(@pauta_bot)? (.*)$',
+                         update.message.text).group(2)
+
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
-            text='Esperava por "/data <texto>"')
+                        text='Esperava por "/data <texto>"')
         return
 
     metadata = db.meta.find_one(
@@ -198,19 +212,20 @@ def data(bot, update):
             },
             metadata)
 
-
     bot.sendMessage(update.message.chat_id,
-        text='Data adicionada',
-        reply_to_message_id=update.message.message_id)
+                    text='Data adicionada',
+                    reply_to_message_id=update.message.message_id)
 
 
 @report_errors
 def local(bot, update):
     try:
-        text = re.search(r'^/local(@pauta_bot)? (.*)$', update.message.text).group(2)
+        text = re.search(r'^/local(@pauta_bot)? (.*)$',
+                         update.message.text).group(2)
+
     except AttributeError:
         bot.sendMessage(update.message.chat_id,
-            text='Esperava por "/local <texto>"')
+                        text='Esperava por "/local <texto>"')
         return
 
     metadata = db.meta.find_one(
@@ -237,17 +252,17 @@ def local(bot, update):
             },
             metadata)
 
-
     bot.sendMessage(update.message.chat_id,
-        text='Local adicionado',
-        reply_to_message_id=update.message.message_id)
+                    text='Local adicionado',
+                    reply_to_message_id=update.message.message_id)
 
 
 @report_errors
 def bot_help(bot, update):
     bot.sendMessage(update.message.chat_id,
-        text=HELP_STR,
-        disable_web_page_preview=True)
+                    text=HELP_STR,
+                    disable_web_page_preview=True)
+
 
 def sanitize_string(string):
     for char in '*`_':
