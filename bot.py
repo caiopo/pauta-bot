@@ -30,6 +30,10 @@ Bot para gerenciar as pautas das reuniões do CALICO
 /data - adiciona uma data para a próxima reunião
 /local - adiciona um local para a próxima reunião
 
+/tarefa - adiciona uma nova tarefa
+/tarefas - lista as tarefas
+/done - remove uma tarefa
+
 Feito por @caiopo
 Repositório: https://github.com/caiopo/pauta-bot
 """).strip('\n')
@@ -262,6 +266,123 @@ def bot_help(bot, update):
     bot.sendMessage(update.message.chat_id,
                     text=HELP_STR,
                     disable_web_page_preview=True)
+
+
+@report_errors
+def tarefa(bot, update):
+    user = update.message.from_user
+
+    try:
+        text = re.search(r'^/tarefa(@pauta_bot)? (.*)$',
+                         update.message.text).group(2)
+
+    except AttributeError:
+        bot.sendMessage(update.message.chat_id,
+                        text='Esperava por "/tarefa <texto>"')
+        return
+
+    result = db.tarefas.insert_one(
+        {
+            'sender': user.name,
+            'text': text,
+            'chat_id': update.message.chat_id,
+        }
+    )
+
+    cursor = db.tarefas.find(
+        {
+            'chat_id': update.message.chat_id,
+        }
+    )
+
+    count = cursor.count()
+
+    cursor.close()
+
+    if result.acknowledged:
+        bot.sendMessage(update.message.chat_id,
+                        text='Tarefa {} registrada'.format(count - 1),
+                        reply_to_message_id=update.message.message_id)
+    else:
+        bot.sendMessage(update.message.chat_id,
+                        text='Tarefa não registrada, algo de errado aconteceu',
+                        reply_to_message_id=update.message.message_id)
+
+
+@report_errors
+def done(bot, update):
+    try:
+        text = re.search(r'^/done(@pauta_bot)? (all|\d+)$',
+                         update.message.text).group(2)
+
+    except AttributeError:
+        bot.sendMessage(update.message.chat_id,
+                        text='Esperava por "^/done (all|\d+)$"')
+        return
+
+    if text == 'all':
+        result = db.tarefas.delete_many(
+            {
+                'chat_id': update.message.chat_id,
+            }
+        )
+
+        bot.sendMessage(update.message.chat_id,
+                        text='{} tarefas removida(s)'.format(
+                            result.deleted_count))
+
+    else:
+        index = int(text)
+
+        cursor = db.tarefas.find(
+            {
+                'chat_id': update.message.chat_id,
+            }
+        )
+
+        try:
+            db.tarefas.delete_one(cursor[index])
+
+            bot.sendMessage(update.message.chat_id,
+                            text='Tarefa removida',
+                            reply_to_message_id=update.message.message_id)
+
+        except IndexError:
+            bot.sendMessage(update.message.chat_id,
+                            text='Tarefa inexistente',
+                            reply_to_message_id=update.message.message_id)
+
+        finally:
+            cursor.close()
+
+
+@report_errors
+def tarefas(bot, update):
+    cursor = db.tarefas.find(
+        {
+            'chat_id': update.message.chat_id,
+        }
+    )
+
+    if not cursor.count():
+        bot.sendMessage(update.message.chat_id,
+                        text='Nenhuma tarefa registrada')
+        return
+
+    msg = '*Tarefas:*\n'
+
+    for index, tarefa in enumerate(cursor):
+        msg += '\u2022 {}: {}\n\n'.format(
+            index,
+            sanitize_string(tarefa['text']))
+
+    cursor.close()
+
+    msg = msg.rstrip('\n')
+
+    bot.sendMessage(update.message.chat_id,
+                    text=msg,
+                    parse_mode=ParseMode.MARKDOWN)
 
 
 def sanitize_string(string):
