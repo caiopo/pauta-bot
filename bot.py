@@ -400,9 +400,12 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('pauta', add_pauta))
     dispatcher.add_handler(CommandHandler('ls', ls_pautas))
     dispatcher.add_handler(CommandHandler('rm', rm_pautas))
-
     dispatcher.add_handler(CommandHandler('data', data))
     dispatcher.add_handler(CommandHandler('local', local))
+
+    dispatcher.add_handler(CommandHandler('tarefa', tarefa))
+    dispatcher.add_handler(CommandHandler('tarefas', tarefas))
+    dispatcher.add_handler(CommandHandler('done', done))
 
     dispatcher.add_handler(CommandHandler('start', bot_help))
     dispatcher.add_handler(CommandHandler('help', bot_help))
